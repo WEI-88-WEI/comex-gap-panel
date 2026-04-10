@@ -4,7 +4,7 @@
 
 ## 当前功能
 
-- 拉取公开日线历史数据（Yahoo Finance chart API）
+- 拉取 TradingView 的 COMEX 连续合约日线历史（`COMEX:GC1!`）
 - 计算过去五年每个周一交易日：
   - 上一交易日收盘价
   - 周一开盘价
@@ -16,13 +16,13 @@
 
 ## 统计口径
 
-当前版本使用 **日线历史** 做计算：
+当前版本使用 **TradingView `COMEX:GC1!` 日线历史** 做计算：
 
 - `gap = Monday Open - Previous Trading Day Close`
 - `gap_pct = gap / Previous Trading Day Close * 100`
 
 注意：
-这不是 tick 级/分钟级官方结算统计，而是一个公开数据近似看板，适合先看整体规律。
+这不是 CME 官方公开 API，而是基于 TradingView 的 COMEX 连续合约历史接口做的研究型看板，适合先看整体规律。
 
 ## 启动
 
