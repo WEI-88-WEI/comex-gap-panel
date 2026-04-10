@@ -1,7 +1,7 @@
 {
   "symbol": "COMEX:GC1!",
   "source": "TradingView websocket (COMEX:GC1!)",
-  "updated_at": "2026-04-10T13:59:13.851371+00:00",
+  "updated_at": "2026-04-10T14:24:30.360102+00:00",
   "range": {
     "start": "2021-04-04",
     "end": "2026-04-09"
@@ -24,9 +24,13 @@
     "avg_abs_open_5m_move_pct": 0.5608049663233399,
     "avg_open_10m_move_pct": 0.3256501848676206,
     "avg_abs_open_10m_move_pct": 0.5235111474344655,
+    "avg_weekend_last_to_5m_pct": 0.06909884017287052,
+    "avg_abs_weekend_last_to_5m_pct": 0.40804495879620634,
+    "avg_weekend_last_to_10m_pct": 0.08823478582821048,
+    "avg_abs_weekend_last_to_10m_pct": 0.34567656057300683,
     "intraday_range": {
       "start": "2026-03-15T22:00:00+00:00",
-      "end": "2026-04-10T13:45:00+00:00"
+      "end": "2026-04-10T14:10:00+00:00"
     }
   },
   "items": [
@@ -2849,12 +2853,16 @@
       "monday_low": 4977.0,
       "monday_close": 5008.2,
       "monday_intraday_range_pct": 1.4444754798292094,
+      "weekend_last_timestamp": "2026-03-15T22:00:00+00:00",
+      "weekend_last_close": 5019.9,
       "open_bar_timestamp": "2026-03-15T22:00:00+00:00",
       "open_bar_open": 5010.0,
       "open_5m_close": 5028.1,
       "open_5m_move_pct": 0.3612774451097877,
       "open_10m_close": 5026.9,
-      "open_10m_move_pct": 0.3373253493013899
+      "open_10m_move_pct": 0.3373253493013899,
+      "weekend_last_to_5m_pct": 0.16334986752725608,
+      "weekend_last_to_10m_pct": 0.13944500886471844
     },
     {
       "monday_date": "2026-03-23",
@@ -2867,12 +2875,16 @@
       "monday_low": 4306.3,
       "monday_close": 4402.0,
       "monday_intraday_range_pct": 4.061339132010514,
+      "weekend_last_timestamp": "2026-03-22T22:00:00+00:00",
+      "weekend_last_close": 4475.7,
       "open_bar_timestamp": "2026-03-22T22:00:00+00:00",
       "open_bar_open": 4450.0,
       "open_5m_close": 4511.1,
       "open_5m_move_pct": 1.3730337078651769,
       "open_10m_close": 4508.3,
-      "open_10m_move_pct": 1.310112359550566
+      "open_10m_move_pct": 1.310112359550566,
+      "weekend_last_to_5m_pct": 0.7909377304108977,
+      "weekend_last_to_10m_pct": 0.7283776839377162
     },
     {
       "monday_date": "2026-03-30",
@@ -2885,12 +2897,16 @@
       "monday_low": 4510.0,
       "monday_close": 4678.6,
       "monday_intraday_range_pct": 4.573795412985533,
+      "weekend_last_timestamp": "2026-03-29T22:00:00+00:00",
+      "weekend_last_close": 4537.2,
       "open_bar_timestamp": "2026-03-29T22:00:00+00:00",
       "open_bar_open": 4520.0,
       "open_5m_close": 4511.5,
       "open_5m_move_pct": -0.18805309734513273,
       "open_10m_close": 4522.3,
-      "open_10m_move_pct": 0.05088495575221641
+      "open_10m_move_pct": 0.05088495575221641,
+      "weekend_last_to_5m_pct": -0.5664286344000666,
+      "weekend_last_to_10m_pct": -0.32839636780392395
     },
     {
       "monday_date": "2026-04-06",
@@ -2903,12 +2919,16 @@
       "monday_low": 4631.9,
       "monday_close": 4684.7,
       "monday_intraday_range_pct": 2.432351558158427,
+      "weekend_last_timestamp": "2026-04-05T22:00:00+00:00",
+      "weekend_last_close": 4665.2,
       "open_bar_timestamp": "2026-04-05T22:00:00+00:00",
       "open_bar_open": 4675.0,
       "open_5m_close": 4660.0,
       "open_5m_move_pct": -0.32085561497326204,
       "open_10m_close": 4656.5,
-      "open_10m_move_pct": -0.3957219251336898
+      "open_10m_move_pct": -0.3957219251336898,
+      "weekend_last_to_5m_pct": -0.11146360284660504,
+      "weekend_last_to_10m_pct": -0.18648718168566875
     }
   ]
 }

@@ -65,6 +65,8 @@ def compute_monday_gaps(rows: list[dict[str, Any]], intraday_rows: list[dict[str
 
     vol5 = [x["open_5m_move_pct"] for x in items if x.get("open_5m_move_pct") is not None]
     vol10 = [x["open_10m_move_pct"] for x in items if x.get("open_10m_move_pct") is not None]
+    weekend5 = [x["weekend_last_to_5m_pct"] for x in items if x.get("weekend_last_to_5m_pct") is not None]
+    weekend10 = [x["weekend_last_to_10m_pct"] for x in items if x.get("weekend_last_to_10m_pct") is not None]
 
     summary = {
         "count": len(items),
@@ -85,6 +87,10 @@ def compute_monday_gaps(rows: list[dict[str, Any]], intraday_rows: list[dict[str
         "avg_abs_open_5m_move_pct": mean([abs(x) for x in vol5]) if vol5 else None,
         "avg_open_10m_move_pct": mean(vol10) if vol10 else None,
         "avg_abs_open_10m_move_pct": mean([abs(x) for x in vol10]) if vol10 else None,
+        "avg_weekend_last_to_5m_pct": mean(weekend5) if weekend5 else None,
+        "avg_abs_weekend_last_to_5m_pct": mean([abs(x) for x in weekend5]) if weekend5 else None,
+        "avg_weekend_last_to_10m_pct": mean(weekend10) if weekend10 else None,
+        "avg_abs_weekend_last_to_10m_pct": mean([abs(x) for x in weekend10]) if weekend10 else None,
         "intraday_range": {
             "start": intraday_rows[0]["timestamp"] if intraday_rows else None,
             "end": intraday_rows[-1]["timestamp"] if intraday_rows else None,
@@ -119,33 +125,58 @@ def build_intraday_monday_metrics(intraday_rows: list[dict[str, Any]]) -> dict[s
 
     by_date: dict[str, list[dict[str, Any]]] = {}
     for row in parsed:
-        if row["dt"].weekday() != 6:
+        monday_date = _infer_monday_market_date(row["dt"])
+        if monday_date is None:
             continue
-        if row["dt"].hour != MARKET_OPEN_HOUR_UTC:
-            continue
-        if row["dt"].minute not in {0, 5, 10}:
-            continue
-        monday_date = (row["dt"] + timedelta(hours=2)).date().isoformat()
         by_date.setdefault(monday_date, []).append(row)
 
     out: dict[str, dict[str, Any]] = {}
     for monday_date, arr in by_date.items():
-        open_bar = next((x for x in arr if x["dt"].minute == 0), None)
-        bar5 = next((x for x in arr if x["dt"].minute == 5), None)
-        bar10 = next((x for x in arr if x["dt"].minute == 10), None)
-        if not open_bar:
-            continue
-        open_px = open_bar.get("open")
-        rec: dict[str, Any] = {
-            "open_bar_timestamp": open_bar["dt"].isoformat(),
-            "open_bar_open": open_px,
-        }
-        if open_px:
+        arr.sort(key=lambda x: x["dt"])
+        open_bar = next((x for x in arr if x["dt"].hour == MARKET_OPEN_HOUR_UTC and x["dt"].minute == 0), None)
+        bar5 = next((x for x in arr if x["dt"].hour == MARKET_OPEN_HOUR_UTC and x["dt"].minute == 5), None)
+        bar10 = next((x for x in arr if x["dt"].hour == MARKET_OPEN_HOUR_UTC and x["dt"].minute == 10), None)
+        weekend_last = _find_weekend_last_bar(arr)
+        rec: dict[str, Any] = {}
+        if weekend_last:
+            rec["weekend_last_timestamp"] = weekend_last["dt"].isoformat()
+            rec["weekend_last_close"] = weekend_last.get("close")
+        if open_bar:
+            open_px = open_bar.get("open")
+            rec["open_bar_timestamp"] = open_bar["dt"].isoformat()
+            rec["open_bar_open"] = open_px
+            if open_px:
+                if bar5 and bar5.get("close") is not None:
+                    rec["open_5m_close"] = bar5["close"]
+                    rec["open_5m_move_pct"] = (bar5["close"] - open_px) / open_px * 100.0
+                if bar10 and bar10.get("close") is not None:
+                    rec["open_10m_close"] = bar10["close"]
+                    rec["open_10m_move_pct"] = (bar10["close"] - open_px) / open_px * 100.0
+        if weekend_last and weekend_last.get("close"):
+            base = weekend_last["close"]
             if bar5 and bar5.get("close") is not None:
-                rec["open_5m_close"] = bar5["close"]
-                rec["open_5m_move_pct"] = (bar5["close"] - open_px) / open_px * 100.0
+                rec["weekend_last_to_5m_pct"] = (bar5["close"] - base) / base * 100.0
             if bar10 and bar10.get("close") is not None:
-                rec["open_10m_close"] = bar10["close"]
-                rec["open_10m_move_pct"] = (bar10["close"] - open_px) / open_px * 100.0
-        out[monday_date] = rec
+                rec["weekend_last_to_10m_pct"] = (bar10["close"] - base) / base * 100.0
+        if rec:
+            out[monday_date] = rec
     return out
+
+
+def _infer_monday_market_date(ts: datetime) -> str | None:
+    ts = ts.astimezone(timezone.utc)
+    if ts.weekday() == 6 and ts.hour >= MARKET_OPEN_HOUR_UTC:
+        return (ts + timedelta(hours=2)).date().isoformat()
+    if ts.weekday() == 0:
+        return ts.date().isoformat()
+    return None
+
+
+def _find_weekend_last_bar(arr: list[dict[str, Any]]) -> dict[str, Any] | None:
+    weekend = [x for x in arr if x["dt"].weekday() == 6 and (x["dt"].hour < MARKET_OPEN_HOUR_UTC or (x["dt"].hour == MARKET_OPEN_HOUR_UTC and x["dt"].minute == 0))]
+    if weekend:
+        return weekend[-1]
+    monday_pre = [x for x in arr if x["dt"].weekday() == 0 and (x["dt"].hour < MARKET_OPEN_HOUR_UTC or (x["dt"].hour == MARKET_OPEN_HOUR_UTC and x["dt"].minute == 0))]
+    if monday_pre:
+        return monday_pre[0]
+    return None

@@ -24,11 +24,11 @@
       background: radial-gradient(circle at 15% 18%, rgba(127,215,255,.14), transparent 28%), radial-gradient(circle at 82% 16%, rgba(255,211,106,.10), transparent 28%), linear-gradient(180deg, var(--bg), var(--bg2));
       font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
     }
-    .wrap { max-width: 1500px; margin: 0 auto; padding: 28px 20px 42px; }
+    .wrap { max-width: 1560px; margin: 0 auto; padding: 28px 20px 42px; }
     .hero { display:flex; justify-content:space-between; gap:20px; align-items:flex-end; margin-bottom:20px; }
     .badge { display:inline-flex; padding:6px 12px; border-radius:999px; border:1px solid var(--line); color:var(--cyan); background:rgba(255,255,255,.04); font-size:12px; }
     h1 { margin:14px 0 10px; font-size:40px; }
-    .sub { color:var(--muted); line-height:1.8; max-width:900px; }
+    .sub { color:var(--muted); line-height:1.8; max-width:920px; }
     .meta, .card, .table-wrap, .chart-panel { background: var(--panel); border:1px solid var(--line); border-radius:22px; box-shadow: var(--shadow); }
     .meta { padding:16px 18px; min-width:320px; }
     .meta .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
@@ -41,9 +41,10 @@
     .chart-panel { padding:18px; margin-bottom:18px; }
     .chart-title { font-size:22px; font-weight:800; margin-bottom:8px; }
     .chart-sub { color:var(--muted); font-size:13px; margin-bottom:16px; }
-    .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
-    .chart-box { min-height: 360px; }
-    .chart { width:100%; height:360px; }
+    .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:18px; }
+    .chart-grid.triple { grid-template-columns:1fr 1fr 1fr; }
+    .chart-box { min-height: 340px; }
+    .chart { width:100%; height:340px; }
     .table-wrap { overflow:hidden; }
     .table-head { display:flex; justify-content:space-between; align-items:center; padding:18px 18px 10px; }
     .table-title { font-size:22px; font-weight:800; }
@@ -58,6 +59,7 @@
     .down { color: var(--red); }
     .table-scroll { max-height: 580px; overflow:auto; }
     code { background: rgba(255,255,255,.06); padding: 2px 6px; border-radius: 6px; }
+    @media (max-width: 1400px) { .chart-grid.triple{grid-template-columns:1fr;} }
     @media (max-width: 1200px) { .hero{flex-direction:column;align-items:stretch;} .cards{grid-template-columns:repeat(2, minmax(0,1fr));} .chart-grid{grid-template-columns:1fr;} }
     @media (max-width: 640px) { .wrap{padding:18px 12px 28px;} h1{font-size:30px;} .cards{grid-template-columns:1fr;} .chart{height:300px;} }
   </style>
@@ -68,7 +70,7 @@
       <div>
         <div class="badge">TradingView / COMEX:GC1! · 过去五年跳空 + 可获取最远 5m/10m</div>
         <h1>COMEX 黄金周一开市跳空面板</h1>
-        <div class="sub">统计口径：日线部分使用 TradingView 的 COMEX 连续合约 <code>COMEX:GC1!</code> 历史，计算过去五年每个周一开盘相对上一交易日收盘的差值与百分比。分钟部分会自动拉取当前接口**能拿到的最远 5 分钟历史**，补充周一开市后 <code>5m</code> / <code>10m</code> 波动百分比。</div>
+        <div class="sub">统计口径：日线部分使用 TradingView 的 COMEX 连续合约 <code>COMEX:GC1!</code> 历史，计算过去五年每个周一开盘相对上一交易日收盘的差值与百分比。分钟部分会自动拉取当前接口**能拿到的最远 5 分钟历史**，补充周一开市后 <code>5m</code> / <code>10m</code> 波动百分比，以及“周末最后价 → 周一开市后 5m / 10m”的变化百分比。</div>
       </div>
       <div class="meta">
         <div class="k">数据源</div>
@@ -93,7 +95,7 @@
       <div class="card"><div class="label">平均10分钟波动</div><div id="avg-10m" class="value">-</div><div class="note">周一开市后 10m 收盘相对开市价</div></div>
     </section>
 
-    <section class="chart-grid">
+    <section class="chart-grid triple">
       <section class="chart-panel chart-box">
         <div class="chart-title">周一跳空百分比历史</div>
         <div class="chart-sub">柱状图展示每个周一开市相对上一个交易日收盘的跳空百分比。绿色为高开，红色为低开。</div>
@@ -101,8 +103,13 @@
       </section>
       <section class="chart-panel chart-box">
         <div class="chart-title">周一开市后 5m / 10m 波动</div>
-        <div class="chart-sub">单独图展示分钟级波动百分比。蓝线为 5m，金线为 10m；只覆盖当前接口能拿到的最远分钟历史样本。</div>
+        <div class="chart-sub">蓝线为 5m，金线为 10m；只覆盖当前接口能拿到的最远分钟历史样本。</div>
         <div id="intraday-chart" class="chart"></div>
+      </section>
+      <section class="chart-panel chart-box">
+        <div class="chart-title">周末最后价 → 周一开市后 5m / 10m</div>
+        <div class="chart-sub">新增图：对比周末最后一个可用价格，与周一开市后 5m / 10m 价格的变化百分比。</div>
+        <div id="weekend-chart" class="chart"></div>
       </section>
     </section>
 
@@ -121,12 +128,13 @@
               <th>周一开盘</th>
               <th>差值</th>
               <th>跳空%</th>
+              <th>周末最后价</th>
               <th>开市后5m收盘</th>
-              <th>5m波动%</th>
+              <th>周末→5m%</th>
               <th>开市后10m收盘</th>
+              <th>周末→10m%</th>
+              <th>5m波动%</th>
               <th>10m波动%</th>
-              <th>周一最高</th>
-              <th>周一最低</th>
               <th>周一收盘</th>
             </tr>
           </thead>
@@ -140,6 +148,7 @@
   <script>
     const gapChart = echarts.init(document.getElementById('gap-chart'));
     const intradayChart = echarts.init(document.getElementById('intraday-chart'));
+    const weekendChart = echarts.init(document.getElementById('weekend-chart'));
     function fmt(v, digits=2) { return v === null || v === undefined ? '-' : Number(v).toFixed(digits); }
     function pct(v) { return v === null || v === undefined ? '-' : `${Number(v).toFixed(3)}%`; }
     function cls(v) { return v > 0 ? 'up' : (v < 0 ? 'down' : ''); }
@@ -175,8 +184,7 @@
       const labels = items.map(x => x.monday_date);
       const values = items.map(x => x.gap_pct);
       gapChart.setOption({
-        backgroundColor: 'transparent',
-        animation: false,
+        backgroundColor: 'transparent', animation: false,
         tooltip: { trigger: 'axis', valueFormatter: v => v == null ? '-' : `${Number(v).toFixed(3)}%` },
         grid: { left: 52, right: 18, top: 28, bottom: 52 },
         xAxis: { type: 'category', data: labels, axisLabel: { color: '#91a2c7', rotate: 45 }, axisLine: { lineStyle: { color: 'rgba(126,156,220,.22)' } } },
@@ -192,8 +200,7 @@
       const line5 = filtered.map(x => x.open_5m_move_pct ?? null);
       const line10 = filtered.map(x => x.open_10m_move_pct ?? null);
       intradayChart.setOption({
-        backgroundColor: 'transparent',
-        animation: false,
+        backgroundColor: 'transparent', animation: false,
         tooltip: { trigger: 'axis', valueFormatter: v => v == null ? '-' : `${Number(v).toFixed(3)}%` },
         legend: { data: ['5m波动', '10m波动'], top: 0, right: 0, textStyle: { color: '#91a2c7' } },
         grid: { left: 52, right: 18, top: 42, bottom: 52 },
@@ -203,6 +210,26 @@
         series: [
           { name: '5m波动', type: 'line', smooth: true, showSymbol: true, symbolSize: 8, lineStyle: { width: 3, color: '#7fd7ff' }, itemStyle: { color: '#7fd7ff' }, data: line5, markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(255,211,106,.30)', type: 'dashed' }, data: [{ yAxis: 0 }] } },
           { name: '10m波动', type: 'line', smooth: true, showSymbol: true, symbolSize: 8, lineStyle: { width: 3, color: '#ffd36a' }, itemStyle: { color: '#ffd36a' }, data: line10 }
+        ],
+      }, true);
+    }
+
+    function renderWeekendChart(items) {
+      const filtered = items.filter(x => x.weekend_last_to_5m_pct != null || x.weekend_last_to_10m_pct != null);
+      const labels = filtered.map(x => x.monday_date);
+      const line5 = filtered.map(x => x.weekend_last_to_5m_pct ?? null);
+      const line10 = filtered.map(x => x.weekend_last_to_10m_pct ?? null);
+      weekendChart.setOption({
+        backgroundColor: 'transparent', animation: false,
+        tooltip: { trigger: 'axis', valueFormatter: v => v == null ? '-' : `${Number(v).toFixed(3)}%` },
+        legend: { data: ['周末→5m', '周末→10m'], top: 0, right: 0, textStyle: { color: '#91a2c7' } },
+        grid: { left: 52, right: 18, top: 42, bottom: 52 },
+        xAxis: { type: 'category', data: labels, axisLabel: { color: '#91a2c7', rotate: 45 }, axisLine: { lineStyle: { color: 'rgba(126,156,220,.22)' } } },
+        yAxis: { type: 'value', axisLabel: { color: '#91a2c7', formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(126,156,220,.12)' } } },
+        dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 10, borderColor: 'rgba(126,156,220,.15)', backgroundColor: 'rgba(255,255,255,.03)', fillerColor: 'rgba(127,215,255,.16)', textStyle: { color: '#91a2c7' } }],
+        series: [
+          { name: '周末→5m', type: 'line', smooth: true, showSymbol: true, symbolSize: 8, lineStyle: { width: 3, color: '#59b5ff' }, itemStyle: { color: '#59b5ff' }, data: line5, markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(255,211,106,.30)', type: 'dashed' }, data: [{ yAxis: 0 }] } },
+          { name: '周末→10m', type: 'line', smooth: true, showSymbol: true, symbolSize: 8, lineStyle: { width: 3, color: '#ffb84d' }, itemStyle: { color: '#ffb84d' }, data: line10 }
         ],
       }, true);
     }
@@ -217,12 +244,13 @@
           <td>${fmt(x.monday_open, 2)}</td>
           <td class="${cls(x.gap)}">${fmt(x.gap, 2)}</td>
           <td class="${cls(x.gap_pct)}">${pct(x.gap_pct)}</td>
+          <td>${fmt(x.weekend_last_close, 2)}</td>
           <td>${fmt(x.open_5m_close, 2)}</td>
-          <td class="${cls(x.open_5m_move_pct)}">${pct(x.open_5m_move_pct)}</td>
+          <td class="${cls(x.weekend_last_to_5m_pct)}">${pct(x.weekend_last_to_5m_pct)}</td>
           <td>${fmt(x.open_10m_close, 2)}</td>
+          <td class="${cls(x.weekend_last_to_10m_pct)}">${pct(x.weekend_last_to_10m_pct)}</td>
+          <td class="${cls(x.open_5m_move_pct)}">${pct(x.open_5m_move_pct)}</td>
           <td class="${cls(x.open_10m_move_pct)}">${pct(x.open_10m_move_pct)}</td>
-          <td>${fmt(x.monday_high, 2)}</td>
-          <td>${fmt(x.monday_low, 2)}</td>
           <td>${fmt(x.monday_close, 2)}</td>
         </tr>
       `).join('');
@@ -237,11 +265,12 @@
       renderSummary(data);
       renderGapChart(data.items || []);
       renderIntradayChart(data.items || []);
+      renderWeekendChart(data.items || []);
       renderTable(data.items || []);
     }
 
     document.getElementById('refresh-btn').addEventListener('click', () => load('POST'));
-    window.addEventListener('resize', () => { gapChart.resize(); intradayChart.resize(); });
+    window.addEventListener('resize', () => { gapChart.resize(); intradayChart.resize(); weekendChart.resize(); });
     load();
   </script>
 </body>
