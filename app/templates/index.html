@@ -29,7 +29,7 @@
     .badge { display:inline-flex; padding:6px 12px; border-radius:999px; border:1px solid var(--line); color:var(--cyan); background:rgba(255,255,255,.04); font-size:12px; }
     h1 { margin:14px 0 10px; font-size:40px; }
     .sub { color:var(--muted); line-height:1.8; max-width:900px; }
-    .meta, .card, .table-wrap { background: var(--panel); border:1px solid var(--line); border-radius:22px; box-shadow: var(--shadow); }
+    .meta, .card, .table-wrap, .chart-panel { background: var(--panel); border:1px solid var(--line); border-radius:22px; box-shadow: var(--shadow); }
     .meta { padding:16px 18px; min-width:320px; }
     .meta .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
     .meta .v { font-size:14px; word-break:break-all; }
@@ -41,7 +41,9 @@
     .chart-panel { padding:18px; margin-bottom:18px; }
     .chart-title { font-size:22px; font-weight:800; margin-bottom:8px; }
     .chart-sub { color:var(--muted); font-size:13px; margin-bottom:16px; }
-    #chart { width:100%; height:360px; }
+    .chart-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .chart-box { min-height: 360px; }
+    .chart { width:100%; height:360px; }
     .table-wrap { overflow:hidden; }
     .table-head { display:flex; justify-content:space-between; align-items:center; padding:18px 18px 10px; }
     .table-title { font-size:22px; font-weight:800; }
@@ -56,8 +58,8 @@
     .down { color: var(--red); }
     .table-scroll { max-height: 580px; overflow:auto; }
     code { background: rgba(255,255,255,.06); padding: 2px 6px; border-radius: 6px; }
-    @media (max-width: 1200px) { .hero{flex-direction:column;align-items:stretch;} .cards{grid-template-columns:repeat(2, minmax(0,1fr));} }
-    @media (max-width: 640px) { .wrap{padding:18px 12px 28px;} h1{font-size:30px;} .cards{grid-template-columns:1fr;} #chart{height:300px;} }
+    @media (max-width: 1200px) { .hero{flex-direction:column;align-items:stretch;} .cards{grid-template-columns:repeat(2, minmax(0,1fr));} .chart-grid{grid-template-columns:1fr;} }
+    @media (max-width: 640px) { .wrap{padding:18px 12px 28px;} h1{font-size:30px;} .cards{grid-template-columns:1fr;} .chart{height:300px;} }
   </style>
 </head>
 <body>
@@ -91,10 +93,17 @@
       <div class="card"><div class="label">平均10分钟波动</div><div id="avg-10m" class="value">-</div><div class="note">周一开市后 10m 收盘相对开市价</div></div>
     </section>
 
-    <section class="chart-panel card">
-      <div class="chart-title">周一跳空百分比历史</div>
-      <div class="chart-sub">柱状图展示每个周一开市相对上一个交易日收盘的跳空百分比。绿色为高开，红色为低开。</div>
-      <div id="chart"></div>
+    <section class="chart-grid">
+      <section class="chart-panel chart-box">
+        <div class="chart-title">周一跳空百分比历史</div>
+        <div class="chart-sub">柱状图展示每个周一开市相对上一个交易日收盘的跳空百分比。绿色为高开，红色为低开。</div>
+        <div id="gap-chart" class="chart"></div>
+      </section>
+      <section class="chart-panel chart-box">
+        <div class="chart-title">周一开市后 5m / 10m 波动</div>
+        <div class="chart-sub">单独图展示分钟级波动百分比。蓝线为 5m，金线为 10m；只覆盖当前接口能拿到的最远分钟历史样本。</div>
+        <div id="intraday-chart" class="chart"></div>
+      </section>
     </section>
 
     <section class="table-wrap">
@@ -129,7 +138,8 @@
 
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <script>
-    const chart = echarts.init(document.getElementById('chart'));
+    const gapChart = echarts.init(document.getElementById('gap-chart'));
+    const intradayChart = echarts.init(document.getElementById('intraday-chart'));
     function fmt(v, digits=2) { return v === null || v === undefined ? '-' : Number(v).toFixed(digits); }
     function pct(v) { return v === null || v === undefined ? '-' : `${Number(v).toFixed(3)}%`; }
     function cls(v) { return v > 0 ? 'up' : (v < 0 ? 'down' : ''); }
@@ -161,10 +171,10 @@
       setText('avg-10m', pct(data.intraday_summary?.avg_open_10m_move_pct), cls(data.intraday_summary?.avg_open_10m_move_pct || 0));
     }
 
-    function renderChart(items) {
+    function renderGapChart(items) {
       const labels = items.map(x => x.monday_date);
       const values = items.map(x => x.gap_pct);
-      chart.setOption({
+      gapChart.setOption({
         backgroundColor: 'transparent',
         animation: false,
         tooltip: { trigger: 'axis', valueFormatter: v => v == null ? '-' : `${Number(v).toFixed(3)}%` },
@@ -173,6 +183,27 @@
         yAxis: { type: 'value', axisLabel: { color: '#91a2c7', formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(126,156,220,.12)' } } },
         dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 10, borderColor: 'rgba(126,156,220,.15)', backgroundColor: 'rgba(255,255,255,.03)', fillerColor: 'rgba(127,215,255,.16)', textStyle: { color: '#91a2c7' } }],
         series: [{ type: 'bar', data: values.map(v => ({ value: v, itemStyle: { color: v >= 0 ? '#39d98a' : '#ff6f86' } })), barMaxWidth: 12, markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(255,211,106,.30)', type: 'dashed' }, data: [{ yAxis: 0 }] } }],
+      }, true);
+    }
+
+    function renderIntradayChart(items) {
+      const filtered = items.filter(x => x.open_5m_move_pct !== null || x.open_10m_move_pct !== null);
+      const labels = filtered.map(x => x.monday_date);
+      const line5 = filtered.map(x => x.open_5m_move_pct ?? null);
+      const line10 = filtered.map(x => x.open_10m_move_pct ?? null);
+      intradayChart.setOption({
+        backgroundColor: 'transparent',
+        animation: false,
+        tooltip: { trigger: 'axis', valueFormatter: v => v == null ? '-' : `${Number(v).toFixed(3)}%` },
+        legend: { data: ['5m波动', '10m波动'], top: 0, right: 0, textStyle: { color: '#91a2c7' } },
+        grid: { left: 52, right: 18, top: 42, bottom: 52 },
+        xAxis: { type: 'category', data: labels, axisLabel: { color: '#91a2c7', rotate: 45 }, axisLine: { lineStyle: { color: 'rgba(126,156,220,.22)' } } },
+        yAxis: { type: 'value', axisLabel: { color: '#91a2c7', formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(126,156,220,.12)' } } },
+        dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 10, borderColor: 'rgba(126,156,220,.15)', backgroundColor: 'rgba(255,255,255,.03)', fillerColor: 'rgba(127,215,255,.16)', textStyle: { color: '#91a2c7' } }],
+        series: [
+          { name: '5m波动', type: 'line', smooth: true, showSymbol: true, symbolSize: 8, lineStyle: { width: 3, color: '#7fd7ff' }, itemStyle: { color: '#7fd7ff' }, data: line5, markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(255,211,106,.30)', type: 'dashed' }, data: [{ yAxis: 0 }] } },
+          { name: '10m波动', type: 'line', smooth: true, showSymbol: true, symbolSize: 8, lineStyle: { width: 3, color: '#ffd36a' }, itemStyle: { color: '#ffd36a' }, data: line10 }
+        ],
       }, true);
     }
 
@@ -204,12 +235,13 @@
         return;
       }
       renderSummary(data);
-      renderChart(data.items || []);
+      renderGapChart(data.items || []);
+      renderIntradayChart(data.items || []);
       renderTable(data.items || []);
     }
 
     document.getElementById('refresh-btn').addEventListener('click', () => load('POST'));
-    window.addEventListener('resize', () => chart.resize());
+    window.addEventListener('resize', () => { gapChart.resize(); intradayChart.resize(); });
     load();
   </script>
 </body>
