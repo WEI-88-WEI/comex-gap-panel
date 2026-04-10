@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COMEX 黄金周一跳空面板</title>
+  <style>
+    :root {
+      --bg: #07101d;
+      --bg2: #0c1830;
+      --panel: rgba(12,22,42,.88);
+      --line: rgba(126,156,220,.18);
+      --text: #edf4ff;
+      --muted: #91a2c7;
+      --gold: #ffd36a;
+      --cyan: #7fd7ff;
+      --green: #39d98a;
+      --red: #ff6f86;
+      --shadow: 0 18px 54px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--text);
+      background: radial-gradient(circle at 15% 18%, rgba(127,215,255,.14), transparent 28%), radial-gradient(circle at 82% 16%, rgba(255,211,106,.10), transparent 28%), linear-gradient(180deg, var(--bg), var(--bg2));
+      font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+    }
+    .wrap { max-width: 1380px; margin: 0 auto; padding: 28px 20px 42px; }
+    .hero { display:flex; justify-content:space-between; gap:20px; align-items:flex-end; margin-bottom:20px; }
+    .badge { display:inline-flex; padding:6px 12px; border-radius:999px; border:1px solid var(--line); color:var(--cyan); background:rgba(255,255,255,.04); font-size:12px; }
+    h1 { margin:14px 0 10px; font-size:40px; }
+    .sub { color:var(--muted); line-height:1.8; max-width:860px; }
+    .meta, .card, .table-wrap { background: var(--panel); border:1px solid var(--line); border-radius:22px; box-shadow: var(--shadow); }
+    .meta { padding:16px 18px; min-width:280px; }
+    .meta .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
+    .meta .v { font-size:14px; word-break:break-all; }
+    .cards { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:18px; }
+    .card { padding:18px; }
+    .label { color:var(--muted); font-size:12px; margin-bottom:8px; }
+    .value { font-size:30px; font-weight:800; font-variant-numeric: tabular-nums; }
+    .note { margin-top:8px; color:var(--muted); font-size:12px; }
+    .chart-panel { padding:18px; margin-bottom:18px; }
+    .chart-title { font-size:22px; font-weight:800; margin-bottom:8px; }
+    .chart-sub { color:var(--muted); font-size:13px; margin-bottom:16px; }
+    #chart { width:100%; height:360px; }
+    .table-wrap { overflow:hidden; }
+    .table-head { display:flex; justify-content:space-between; align-items:center; padding:18px 18px 10px; }
+    .table-title { font-size:22px; font-weight:800; }
+    .actions { display:flex; gap:10px; }
+    button { border:1px solid rgba(127,215,255,.28); background:rgba(127,215,255,.08); color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; }
+    th, td { padding:12px 14px; border-top:1px solid var(--line); text-align:right; font-variant-numeric: tabular-nums; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align:left; }
+    th { color:var(--muted); font-size:12px; position:sticky; top:0; background:rgba(8,16,29,.96); }
+    tbody tr:hover { background: rgba(255,255,255,.03); }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .table-scroll { max-height: 540px; overflow:auto; }
+    @media (max-width: 1024px) { .hero{flex-direction:column;align-items:stretch;} .cards{grid-template-columns:repeat(2, minmax(0,1fr));} }
+    @media (max-width: 640px) { .wrap{padding:18px 12px 28px;} h1{font-size:30px;} .cards{grid-template-columns:1fr;} #chart{height:300px;} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <div class="badge">COMEX 黄金 · 过去五年 · 周一跳空</div>
+        <h1>COMEX 黄金周一开市跳空面板</h1>
+        <div class="sub">统计口径：以公开日线历史数据近似计算，取每个周一交易日的开盘价，与上一个交易日收盘价做差，输出绝对差值与百分比。这里先解决你要的“过去五年周一开市 vs 上周休市”这一段，后续再接 5 分钟/10 分钟模块。</div>
+      </div>
+      <div class="meta">
+        <div class="k">数据源</div>
+        <div id="source" class="v">-</div>
+        <div class="k" style="margin-top:12px;">更新时间</div>
+        <div id="updated" class="v">-</div>
+        <div class="k" style="margin-top:12px;">统计区间</div>
+        <div id="range" class="v">-</div>
+      </div>
+    </div>
+
+    <section class="cards">
+      <div class="card"><div class="label">样本周数</div><div id="count" class="value">-</div><div class="note">过去五年可用周一交易样本</div></div>
+      <div class="card"><div class="label">平均跳空百分比</div><div id="avg-gap" class="value">-</div><div class="note">有方向，正值代表周一高开</div></div>
+      <div class="card"><div class="label">平均绝对跳空百分比</div><div id="avg-abs-gap" class="value">-</div><div class="note">不看方向，只看幅度</div></div>
+      <div class="card"><div class="label">上涨周 / 下跌周</div><div id="up-down" class="value">-</div><div class="note">周一相对前一交易日收盘</div></div>
+    </section>
+
+    <section class="chart-panel card">
+      <div class="chart-title">周一跳空百分比历史</div>
+      <div class="chart-sub">柱状图展示每个周一开市相对上一个交易日收盘的跳空百分比。绿色为高开，红色为低开。</div>
+      <div id="chart"></div>
+    </section>
+
+    <section class="table-wrap">
+      <div class="table-head">
+        <div class="table-title">明细表</div>
+        <div class="actions"><button id="refresh-btn">刷新数据</button></div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>周一日期</th>
+              <th>上一交易日</th>
+              <th>上一收盘</th>
+              <th>周一开盘</th>
+              <th>差值</th>
+              <th>百分比</th>
+              <th>周一最高</th>
+              <th>周一最低</th>
+              <th>周一收盘</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    const chart = echarts.init(document.getElementById('chart'));
+    function fmt(v, digits=2) { return v === null || v === undefined ? '-' : Number(v).toFixed(digits); }
+    function pct(v) { return v === null || v === undefined ? '-' : `${Number(v).toFixed(3)}%`; }
+    function cls(v) { return v > 0 ? 'up' : (v < 0 ? 'down' : ''); }
+
+    async function fetchData(method='GET') {
+      const res = await fetch(method === 'POST' ? '/api/refresh' : '/api/data', { method });
+      return res.json();
+    }
+
+    function setText(id, text, className='') {
+      const el = document.getElementById(id);
+      el.textContent = text;
+      el.className = `value ${className}`.trim();
+    }
+
+    function renderSummary(data) {
+      document.getElementById('source').textContent = data.source || '-';
+      document.getElementById('updated').textContent = data.updated_at || '-';
+      document.getElementById('range').textContent = `${data.range?.start || '-'} → ${data.range?.end || '-'}`;
+      setText('count', String(data.summary?.count ?? '-'));
+      setText('avg-gap', pct(data.summary?.avg_gap_pct), cls(data.summary?.avg_gap_pct || 0));
+      setText('avg-abs-gap', pct(data.summary?.avg_abs_gap_pct));
+      setText('up-down', `${data.summary?.up_weeks ?? 0} / ${data.summary?.down_weeks ?? 0}`);
+    }
+
+    function renderChart(items) {
+      const labels = items.map(x => x.monday_date);
+      const values = items.map(x => x.gap_pct);
+      chart.setOption({
+        backgroundColor: 'transparent',
+        animation: false,
+        tooltip: { trigger: 'axis', valueFormatter: v => v == null ? '-' : `${Number(v).toFixed(3)}%` },
+        grid: { left: 52, right: 18, top: 28, bottom: 52 },
+        xAxis: { type: 'category', data: labels, axisLabel: { color: '#91a2c7', rotate: 45 }, axisLine: { lineStyle: { color: 'rgba(126,156,220,.22)' } } },
+        yAxis: { type: 'value', axisLabel: { color: '#91a2c7', formatter: '{value}%' }, splitLine: { lineStyle: { color: 'rgba(126,156,220,.12)' } } },
+        dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 10, borderColor: 'rgba(126,156,220,.15)', backgroundColor: 'rgba(255,255,255,.03)', fillerColor: 'rgba(127,215,255,.16)', textStyle: { color: '#91a2c7' } }],
+        series: [{ type: 'bar', data: values.map(v => ({ value: v, itemStyle: { color: v >= 0 ? '#39d98a' : '#ff6f86' } })), barMaxWidth: 12, markLine: { silent: true, symbol: 'none', lineStyle: { color: 'rgba(255,211,106,.30)', type: 'dashed' }, data: [{ yAxis: 0 }] } }],
+      }, true);
+    }
+
+    function renderTable(items) {
+      const tbody = document.getElementById('tbody');
+      tbody.innerHTML = items.slice().reverse().map(x => `
+        <tr>
+          <td>${x.monday_date}</td>
+          <td>${x.previous_trading_date}</td>
+          <td>${fmt(x.previous_close, 2)}</td>
+          <td>${fmt(x.monday_open, 2)}</td>
+          <td class="${cls(x.gap)}">${fmt(x.gap, 2)}</td>
+          <td class="${cls(x.gap_pct)}">${pct(x.gap_pct)}</td>
+          <td>${fmt(x.monday_high, 2)}</td>
+          <td>${fmt(x.monday_low, 2)}</td>
+          <td>${fmt(x.monday_close, 2)}</td>
+        </tr>
+      `).join('');
+    }
+
+    async function load(method='GET') {
+      const data = await fetchData(method);
+      if (data.error) {
+        alert(data.error);
+        return;
+      }
+      renderSummary(data);
+      renderChart(data.items || []);
+      renderTable(data.items || []);
+    }
+
+    document.getElementById('refresh-btn').addEventListener('click', () => load('POST'));
+    window.addEventListener('resize', () => chart.resize());
+    load();
+  </script>
+</body>
+</html>
