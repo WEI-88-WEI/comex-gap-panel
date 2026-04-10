@@ -1,7 +1,7 @@
 {
   "symbol": "COMEX:GC1!",
   "source": "TradingView websocket (COMEX:GC1!)",
-  "updated_at": "2026-04-10T13:29:28.935833+00:00",
+  "updated_at": "2026-04-10T13:59:13.851371+00:00",
   "range": {
     "start": "2021-04-04",
     "end": "2026-04-09"
@@ -16,6 +16,18 @@
     "down_weeks": 99,
     "up_ratio_pct": 56.30252100840336,
     "down_ratio_pct": 41.596638655462186
+  },
+  "intraday_summary": {
+    "count_5m": 4,
+    "count_10m": 4,
+    "avg_open_5m_move_pct": 0.30635061016414245,
+    "avg_abs_open_5m_move_pct": 0.5608049663233399,
+    "avg_open_10m_move_pct": 0.3256501848676206,
+    "avg_abs_open_10m_move_pct": 0.5235111474344655,
+    "intraday_range": {
+      "start": "2026-03-15T22:00:00+00:00",
+      "end": "2026-04-10T13:45:00+00:00"
+    }
   },
   "items": [
     {
@@ -2836,7 +2848,13 @@
       "monday_high": 5049.4,
       "monday_low": 4977.0,
       "monday_close": 5008.2,
-      "monday_intraday_range_pct": 1.4444754798292094
+      "monday_intraday_range_pct": 1.4444754798292094,
+      "open_bar_timestamp": "2026-03-15T22:00:00+00:00",
+      "open_bar_open": 5010.0,
+      "open_5m_close": 5028.1,
+      "open_5m_move_pct": 0.3612774451097877,
+      "open_10m_close": 5026.9,
+      "open_10m_move_pct": 0.3373253493013899
     },
     {
       "monday_date": "2026-03-23",
@@ -2848,7 +2866,13 @@
       "monday_high": 4485.6,
       "monday_low": 4306.3,
       "monday_close": 4402.0,
-      "monday_intraday_range_pct": 4.061339132010514
+      "monday_intraday_range_pct": 4.061339132010514,
+      "open_bar_timestamp": "2026-03-22T22:00:00+00:00",
+      "open_bar_open": 4450.0,
+      "open_5m_close": 4511.1,
+      "open_5m_move_pct": 1.3730337078651769,
+      "open_10m_close": 4508.3,
+      "open_10m_move_pct": 1.310112359550566
     },
     {
       "monday_date": "2026-03-30",
@@ -2860,7 +2884,13 @@
       "monday_high": 4717.6,
       "monday_low": 4510.0,
       "monday_close": 4678.6,
-      "monday_intraday_range_pct": 4.573795412985533
+      "monday_intraday_range_pct": 4.573795412985533,
+      "open_bar_timestamp": "2026-03-29T22:00:00+00:00",
+      "open_bar_open": 4520.0,
+      "open_5m_close": 4511.5,
+      "open_5m_move_pct": -0.18805309734513273,
+      "open_10m_close": 4522.3,
+      "open_10m_move_pct": 0.05088495575221641
     },
     {
       "monday_date": "2026-04-06",
@@ -2872,7 +2902,13 @@
       "monday_high": 4745.7,
       "monday_low": 4631.9,
       "monday_close": 4684.7,
-      "monday_intraday_range_pct": 2.432351558158427
+      "monday_intraday_range_pct": 2.432351558158427,
+      "open_bar_timestamp": "2026-04-05T22:00:00+00:00",
+      "open_bar_open": 4675.0,
+      "open_5m_close": 4660.0,
+      "open_5m_move_pct": -0.32085561497326204,
+      "open_10m_close": 4656.5,
+      "open_10m_move_pct": -0.3957219251336898
     }
   ]
 }

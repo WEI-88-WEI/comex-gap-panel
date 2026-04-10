@@ -14,31 +14,34 @@ TV_WS_URL = "wss://data.tradingview.com/socket.io/websocket"
 TV_ORIGIN = "https://data.tradingview.com"
 SYMBOL = "COMEX:GC1!"
 N_BARS = 1300
+INTRADAY_BARS = 10000
 MAX_RETRIES = 3
 
 
-def fetch_daily_series() -> dict[str, Any]:
-    rows = _fetch_tradingview_daily_bars(symbol=SYMBOL, n_bars=N_BARS)
+def fetch_all_series() -> dict[str, Any]:
+    daily_rows = _fetch_tradingview_bars(symbol=SYMBOL, resolution="1D", n_bars=N_BARS, min_expected=1000)
+    intraday_rows = _fetch_tradingview_bars(symbol=SYMBOL, resolution="5", n_bars=INTRADAY_BARS, min_expected=1000)
     return {
         "symbol": SYMBOL,
         "source": "TradingView websocket (COMEX:GC1!)",
         "updated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
-        "rows": rows,
+        "daily_rows": daily_rows,
+        "intraday_rows": intraday_rows,
     }
 
 
-def _fetch_tradingview_daily_bars(symbol: str, n_bars: int) -> list[dict[str, Any]]:
+def _fetch_tradingview_bars(symbol: str, resolution: str, n_bars: int, min_expected: int) -> list[dict[str, Any]]:
     last_error: Exception | None = None
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            return _fetch_once(symbol, n_bars)
+            return _fetch_once(symbol, resolution, n_bars, min_expected)
         except Exception as e:
             last_error = e
             time.sleep(1.2 * attempt)
-    raise RuntimeError(f"TradingView fetch failed after {MAX_RETRIES} retries: {last_error}")
+    raise RuntimeError(f"TradingView fetch failed for resolution={resolution} after {MAX_RETRIES} retries: {last_error}")
 
 
-def _fetch_once(symbol: str, n_bars: int) -> list[dict[str, Any]]:
+def _fetch_once(symbol: str, resolution: str, n_bars: int, min_expected: int) -> list[dict[str, Any]]:
     ws = create_connection(
         TV_WS_URL,
         header=[f"Origin: {TV_ORIGIN}", "User-Agent: Mozilla/5.0"],
@@ -53,32 +56,7 @@ def _fetch_once(symbol: str, n_bars: int) -> list[dict[str, Any]]:
         ("quote_create_session", [quote_session]),
         (
             "quote_set_fields",
-            [
-                quote_session,
-                "ch",
-                "chp",
-                "current_session",
-                "description",
-                "local_description",
-                "language",
-                "exchange",
-                "fractional",
-                "is_tradable",
-                "lp",
-                "lp_time",
-                "minmov",
-                "minmove2",
-                "original_name",
-                "pricescale",
-                "pro_name",
-                "short_name",
-                "type",
-                "update_mode",
-                "volume",
-                "currency_code",
-                "rchp",
-                "rtc",
-            ],
+            [quote_session, "lp", "volume", "exchange", "type", "subtype", "description"],
         ),
         ("quote_add_symbols", [quote_session, symbol, {"flags": ["force_permission"]}]),
         ("quote_fast_symbols", [quote_session, symbol]),
@@ -86,7 +64,7 @@ def _fetch_once(symbol: str, n_bars: int) -> list[dict[str, Any]]:
             "resolve_symbol",
             [chart_session, "symbol_1", '={"symbol":"COMEX:GC1!","adjustment":"splits","session":"regular"}'],
         ),
-        ("create_series", [chart_session, "s1", "s1", "symbol_1", "1D", n_bars]),
+        ("create_series", [chart_session, "s1", "s1", "symbol_1", resolution, n_bars]),
         ("switch_timezone", [chart_session, "exchange"]),
     ]
 
@@ -101,19 +79,19 @@ def _fetch_once(symbol: str, n_bars: int) -> list[dict[str, Any]]:
             chunks.append(payload)
             if "series_completed" in payload:
                 break
-            if time.time() - start > 25:
-                raise RuntimeError("TradingView websocket timed out before series_completed")
+            if time.time() - start > 30:
+                raise RuntimeError(f"TradingView websocket timed out before series_completed for resolution={resolution}")
     finally:
         ws.close()
 
     raw = "\n".join(chunks)
-    rows = _parse_rows(raw)
-    if len(rows) < 1000:
-        raise RuntimeError(f"Too few rows parsed from TradingView: {len(rows)}")
+    rows = _parse_rows(raw, resolution)
+    if len(rows) < min_expected:
+        raise RuntimeError(f"Too few rows parsed from TradingView for resolution={resolution}: {len(rows)}")
     return rows
 
 
-def _parse_rows(raw: str) -> list[dict[str, Any]]:
+def _parse_rows(raw: str, resolution: str) -> list[dict[str, Any]]:
     marker = '"s":['
     start = raw.find(marker)
     if start == -1:
@@ -137,19 +115,21 @@ def _parse_rows(raw: str) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for m in pattern.finditer(content):
         ts = float(m.group(2))
-        rows.append(
-            {
-                "date": dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc).strftime("%Y-%m-%d"),
-                "open": float(m.group(3)),
-                "high": float(m.group(4)),
-                "low": float(m.group(5)),
-                "close": float(m.group(6)),
-                "volume": float(m.group(7)),
-                "adjclose": None,
-            }
-        )
+        ts_dt = dt.datetime.fromtimestamp(ts, tz=dt.timezone.utc)
+        row = {
+            "timestamp": ts_dt.isoformat(),
+            "open": float(m.group(3)),
+            "high": float(m.group(4)),
+            "low": float(m.group(5)),
+            "close": float(m.group(6)),
+            "volume": float(m.group(7)),
+        }
+        if resolution == "1D":
+            row["date"] = ts_dt.strftime("%Y-%m-%d")
+            row["adjclose"] = None
+        rows.append(row)
     if not rows:
-        raise RuntimeError("No daily bars parsed from TradingView response")
+        raise RuntimeError("No bars parsed from TradingView response")
     return rows
 
 

@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.analytics import compute_monday_gaps
-from app.data_fetcher import fetch_daily_series
+from app.data_fetcher import fetch_all_series
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR.parent / "data"
@@ -27,14 +27,15 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 def refresh_cache() -> dict:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    raw = fetch_daily_series()
-    analytics = compute_monday_gaps(raw["rows"], years=5)
+    raw = fetch_all_series()
+    analytics = compute_monday_gaps(raw["daily_rows"], intraday_rows=raw["intraday_rows"], years=5)
     payload = {
         "symbol": raw["symbol"],
         "source": raw["source"],
         "updated_at": raw["updated_at"],
         "range": analytics["range"],
         "summary": analytics["summary"],
+        "intraday_summary": analytics["intraday_summary"],
         "items": analytics["items"],
     }
     CACHE_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

@@ -5,7 +5,11 @@ from statistics import mean
 from typing import Any
 
 
-def compute_monday_gaps(rows: list[dict[str, Any]], years: int = 5) -> dict[str, Any]:
+MARKET_OPEN_HOUR_UTC = 22
+MARKET_OPEN_MINUTE_UTC = 0
+
+
+def compute_monday_gaps(rows: list[dict[str, Any]], intraday_rows: list[dict[str, Any]] | None = None, years: int = 5) -> dict[str, Any]:
     cleaned = []
     for row in rows:
         try:
@@ -18,7 +22,9 @@ def compute_monday_gaps(rows: list[dict[str, Any]], years: int = 5) -> dict[str,
 
     cleaned.sort(key=lambda x: x["dt"])
     if not cleaned:
-        return {"items": [], "summary": {}}
+        return {"items": [], "summary": {}, "intraday_summary": {}}
+
+    intraday_map = build_intraday_monday_metrics(intraday_rows or [])
 
     end_dt = cleaned[-1]["dt"]
     start_dt = end_dt - timedelta(days=365 * years + 7)
@@ -33,6 +39,8 @@ def compute_monday_gaps(rows: list[dict[str, Any]], years: int = 5) -> dict[str,
             intraday_range_pct = None
             if row.get("high") is not None and row.get("low") is not None and row["open"]:
                 intraday_range_pct = (row["high"] - row["low"]) / row["open"] * 100.0
+            monday_key = row["date"]
+            extra = intraday_map.get(monday_key, {})
             items.append(
                 {
                     "monday_date": row["date"],
@@ -45,6 +53,7 @@ def compute_monday_gaps(rows: list[dict[str, Any]], years: int = 5) -> dict[str,
                     "monday_low": row.get("low"),
                     "monday_close": row.get("close"),
                     "monday_intraday_range_pct": intraday_range_pct,
+                    **extra,
                 }
             )
         prev = row
@@ -53,6 +62,9 @@ def compute_monday_gaps(rows: list[dict[str, Any]], years: int = 5) -> dict[str,
     abs_gap_pcts = [abs(x) for x in gap_pcts]
     pos = [x for x in gap_pcts if x > 0]
     neg = [x for x in gap_pcts if x < 0]
+
+    vol5 = [x["open_5m_move_pct"] for x in items if x.get("open_5m_move_pct") is not None]
+    vol10 = [x["open_10m_move_pct"] for x in items if x.get("open_10m_move_pct") is not None]
 
     summary = {
         "count": len(items),
@@ -66,11 +78,74 @@ def compute_monday_gaps(rows: list[dict[str, Any]], years: int = 5) -> dict[str,
         "down_ratio_pct": (len(neg) / len(items) * 100.0) if items else None,
     }
 
+    intraday_summary = {
+        "count_5m": len(vol5),
+        "count_10m": len(vol10),
+        "avg_open_5m_move_pct": mean(vol5) if vol5 else None,
+        "avg_abs_open_5m_move_pct": mean([abs(x) for x in vol5]) if vol5 else None,
+        "avg_open_10m_move_pct": mean(vol10) if vol10 else None,
+        "avg_abs_open_10m_move_pct": mean([abs(x) for x in vol10]) if vol10 else None,
+        "intraday_range": {
+            "start": intraday_rows[0]["timestamp"] if intraday_rows else None,
+            "end": intraday_rows[-1]["timestamp"] if intraday_rows else None,
+        },
+    }
+
     return {
         "items": items,
         "summary": summary,
+        "intraday_summary": intraday_summary,
         "range": {
             "start": window[0]["date"] if window else None,
             "end": window[-1]["date"] if window else None,
         },
     }
+
+
+def build_intraday_monday_metrics(intraday_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    parsed = []
+    for row in intraday_rows:
+        ts = row.get("timestamp")
+        if not ts:
+            continue
+        try:
+            dt_obj = datetime.fromisoformat(ts)
+        except Exception:
+            continue
+        item = dict(row)
+        item["dt"] = dt_obj.astimezone(timezone.utc)
+        parsed.append(item)
+    parsed.sort(key=lambda x: x["dt"])
+
+    by_date: dict[str, list[dict[str, Any]]] = {}
+    for row in parsed:
+        if row["dt"].weekday() != 6:
+            continue
+        if row["dt"].hour != MARKET_OPEN_HOUR_UTC:
+            continue
+        if row["dt"].minute not in {0, 5, 10}:
+            continue
+        monday_date = (row["dt"] + timedelta(hours=2)).date().isoformat()
+        by_date.setdefault(monday_date, []).append(row)
+
+    out: dict[str, dict[str, Any]] = {}
+    for monday_date, arr in by_date.items():
+        open_bar = next((x for x in arr if x["dt"].minute == 0), None)
+        bar5 = next((x for x in arr if x["dt"].minute == 5), None)
+        bar10 = next((x for x in arr if x["dt"].minute == 10), None)
+        if not open_bar:
+            continue
+        open_px = open_bar.get("open")
+        rec: dict[str, Any] = {
+            "open_bar_timestamp": open_bar["dt"].isoformat(),
+            "open_bar_open": open_px,
+        }
+        if open_px:
+            if bar5 and bar5.get("close") is not None:
+                rec["open_5m_close"] = bar5["close"]
+                rec["open_5m_move_pct"] = (bar5["close"] - open_px) / open_px * 100.0
+            if bar10 and bar10.get("close") is not None:
+                rec["open_10m_close"] = bar10["close"]
+                rec["open_10m_move_pct"] = (bar10["close"] - open_px) / open_px * 100.0
+        out[monday_date] = rec
+    return out

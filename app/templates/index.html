@@ -24,13 +24,13 @@
       background: radial-gradient(circle at 15% 18%, rgba(127,215,255,.14), transparent 28%), radial-gradient(circle at 82% 16%, rgba(255,211,106,.10), transparent 28%), linear-gradient(180deg, var(--bg), var(--bg2));
       font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans SC", sans-serif;
     }
-    .wrap { max-width: 1380px; margin: 0 auto; padding: 28px 20px 42px; }
+    .wrap { max-width: 1500px; margin: 0 auto; padding: 28px 20px 42px; }
     .hero { display:flex; justify-content:space-between; gap:20px; align-items:flex-end; margin-bottom:20px; }
     .badge { display:inline-flex; padding:6px 12px; border-radius:999px; border:1px solid var(--line); color:var(--cyan); background:rgba(255,255,255,.04); font-size:12px; }
     h1 { margin:14px 0 10px; font-size:40px; }
-    .sub { color:var(--muted); line-height:1.8; max-width:860px; }
+    .sub { color:var(--muted); line-height:1.8; max-width:900px; }
     .meta, .card, .table-wrap { background: var(--panel); border:1px solid var(--line); border-radius:22px; box-shadow: var(--shadow); }
-    .meta { padding:16px 18px; min-width:280px; }
+    .meta { padding:16px 18px; min-width:320px; }
     .meta .k { color:var(--muted); font-size:12px; margin-bottom:6px; }
     .meta .v { font-size:14px; word-break:break-all; }
     .cards { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap:14px; margin-bottom:18px; }
@@ -48,14 +48,15 @@
     .actions { display:flex; gap:10px; }
     button { border:1px solid rgba(127,215,255,.28); background:rgba(127,215,255,.08); color:var(--text); padding:10px 14px; border-radius:12px; cursor:pointer; }
     table { width:100%; border-collapse:collapse; }
-    th, td { padding:12px 14px; border-top:1px solid var(--line); text-align:right; font-variant-numeric: tabular-nums; }
+    th, td { padding:12px 14px; border-top:1px solid var(--line); text-align:right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align:left; }
     th { color:var(--muted); font-size:12px; position:sticky; top:0; background:rgba(8,16,29,.96); }
     tbody tr:hover { background: rgba(255,255,255,.03); }
     .up { color: var(--green); }
     .down { color: var(--red); }
-    .table-scroll { max-height: 540px; overflow:auto; }
-    @media (max-width: 1024px) { .hero{flex-direction:column;align-items:stretch;} .cards{grid-template-columns:repeat(2, minmax(0,1fr));} }
+    .table-scroll { max-height: 580px; overflow:auto; }
+    code { background: rgba(255,255,255,.06); padding: 2px 6px; border-radius: 6px; }
+    @media (max-width: 1200px) { .hero{flex-direction:column;align-items:stretch;} .cards{grid-template-columns:repeat(2, minmax(0,1fr));} }
     @media (max-width: 640px) { .wrap{padding:18px 12px 28px;} h1{font-size:30px;} .cards{grid-template-columns:1fr;} #chart{height:300px;} }
   </style>
 </head>
@@ -63,17 +64,19 @@
   <div class="wrap">
     <div class="hero">
       <div>
-        <div class="badge">TradingView / COMEX:GC1! · 过去五年 · 周一跳空</div>
+        <div class="badge">TradingView / COMEX:GC1! · 过去五年跳空 + 可获取最远 5m/10m</div>
         <h1>COMEX 黄金周一开市跳空面板</h1>
-        <div class="sub">统计口径：使用 TradingView 的 COMEX 连续合约 <code>COMEX:GC1!</code> 日线历史，取每个周一交易日的开盘价，与上一个交易日收盘价做差，输出绝对差值与百分比。当前这版已经不是 Yahoo 近似口径，而是切到了 COMEX 映射连续合约。</div>
+        <div class="sub">统计口径：日线部分使用 TradingView 的 COMEX 连续合约 <code>COMEX:GC1!</code> 历史，计算过去五年每个周一开盘相对上一交易日收盘的差值与百分比。分钟部分会自动拉取当前接口**能拿到的最远 5 分钟历史**，补充周一开市后 <code>5m</code> / <code>10m</code> 波动百分比。</div>
       </div>
       <div class="meta">
         <div class="k">数据源</div>
         <div id="source" class="v">-</div>
         <div class="k" style="margin-top:12px;">更新时间</div>
         <div id="updated" class="v">-</div>
-        <div class="k" style="margin-top:12px;">统计区间</div>
+        <div class="k" style="margin-top:12px;">日线统计区间</div>
         <div id="range" class="v">-</div>
+        <div class="k" style="margin-top:12px;">分钟级覆盖区间</div>
+        <div id="intraday-range" class="v">-</div>
       </div>
     </div>
 
@@ -82,6 +85,10 @@
       <div class="card"><div class="label">平均跳空百分比</div><div id="avg-gap" class="value">-</div><div class="note">有方向，正值代表周一高开</div></div>
       <div class="card"><div class="label">平均绝对跳空百分比</div><div id="avg-abs-gap" class="value">-</div><div class="note">不看方向，只看幅度</div></div>
       <div class="card"><div class="label">上涨周 / 下跌周</div><div id="up-down" class="value">-</div><div class="note">周一相对前一交易日收盘</div></div>
+      <div class="card"><div class="label">5分钟波动样本</div><div id="count-5m" class="value">-</div><div class="note">能拿到分钟级数据的周一样本</div></div>
+      <div class="card"><div class="label">平均5分钟波动</div><div id="avg-5m" class="value">-</div><div class="note">周一开市后 5m 收盘相对开市价</div></div>
+      <div class="card"><div class="label">10分钟波动样本</div><div id="count-10m" class="value">-</div><div class="note">能拿到分钟级数据的周一样本</div></div>
+      <div class="card"><div class="label">平均10分钟波动</div><div id="avg-10m" class="value">-</div><div class="note">周一开市后 10m 收盘相对开市价</div></div>
     </section>
 
     <section class="chart-panel card">
@@ -104,7 +111,11 @@
               <th>上一收盘</th>
               <th>周一开盘</th>
               <th>差值</th>
-              <th>百分比</th>
+              <th>跳空%</th>
+              <th>开市后5m收盘</th>
+              <th>5m波动%</th>
+              <th>开市后10m收盘</th>
+              <th>10m波动%</th>
               <th>周一最高</th>
               <th>周一最低</th>
               <th>周一收盘</th>
@@ -138,10 +149,16 @@
       document.getElementById('source').textContent = data.source || '-';
       document.getElementById('updated').textContent = data.updated_at || '-';
       document.getElementById('range').textContent = `${data.range?.start || '-'} → ${data.range?.end || '-'}`;
+      const ir = data.intraday_summary?.intraday_range || {};
+      document.getElementById('intraday-range').textContent = `${ir.start || '-'} → ${ir.end || '-'}`;
       setText('count', String(data.summary?.count ?? '-'));
       setText('avg-gap', pct(data.summary?.avg_gap_pct), cls(data.summary?.avg_gap_pct || 0));
       setText('avg-abs-gap', pct(data.summary?.avg_abs_gap_pct));
       setText('up-down', `${data.summary?.up_weeks ?? 0} / ${data.summary?.down_weeks ?? 0}`);
+      setText('count-5m', String(data.intraday_summary?.count_5m ?? '-'));
+      setText('avg-5m', pct(data.intraday_summary?.avg_open_5m_move_pct), cls(data.intraday_summary?.avg_open_5m_move_pct || 0));
+      setText('count-10m', String(data.intraday_summary?.count_10m ?? '-'));
+      setText('avg-10m', pct(data.intraday_summary?.avg_open_10m_move_pct), cls(data.intraday_summary?.avg_open_10m_move_pct || 0));
     }
 
     function renderChart(items) {
@@ -169,6 +186,10 @@
           <td>${fmt(x.monday_open, 2)}</td>
           <td class="${cls(x.gap)}">${fmt(x.gap, 2)}</td>
           <td class="${cls(x.gap_pct)}">${pct(x.gap_pct)}</td>
+          <td>${fmt(x.open_5m_close, 2)}</td>
+          <td class="${cls(x.open_5m_move_pct)}">${pct(x.open_5m_move_pct)}</td>
+          <td>${fmt(x.open_10m_close, 2)}</td>
+          <td class="${cls(x.open_10m_move_pct)}">${pct(x.open_10m_move_pct)}</td>
           <td>${fmt(x.monday_high, 2)}</td>
           <td>${fmt(x.monday_low, 2)}</td>
           <td>${fmt(x.monday_close, 2)}</td>
