@@ -187,7 +187,7 @@
     }
 
     function renderIntradayChart(items) {
-      const filtered = items.filter(x => x.open_5m_move_pct !== null || x.open_10m_move_pct !== null);
+      const filtered = items.filter(x => x.open_5m_move_pct != null || x.open_10m_move_pct != null);
       const labels = filtered.map(x => x.monday_date);
       const line5 = filtered.map(x => x.open_5m_move_pct ?? null);
       const line10 = filtered.map(x => x.open_10m_move_pct ?? null);
